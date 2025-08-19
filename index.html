@@ -7,21 +7,17 @@
 <style>
 body { font-family:sans-serif; margin:20px; }
 header { text-align:center; margin-bottom:20px; }
-.sub { font-size:0.9em; color:gray; }
 .wrap { display:flex; flex-direction:column; gap:10px; margin-top:10px; }
-.fixture { margin-bottom:10px; }
 input { width:40px; }
 select { padding:5px; margin-bottom:10px; }
 button { margin-top:10px; padding:5px 10px; }
-table { border-collapse: collapse; margin-top:10px; width:100%; }
-th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 </style>
 </head>
 <body>
 
 <header>
 <h1>Premier League Predictor – 2025/26</h1>
-<div class="sub">10 players • full season • auto-saving • admin view • Excel export • scoring</div>
+<div class="sub">Enter your predictions • Auto-saves in browser</div>
 </header>
 
 <label>Select Player: 
@@ -30,141 +26,78 @@ th, td { border:1px solid #ccc; padding:5px; text-align:center; }
 
 <div id="fixturesWrap" class="wrap"></div>
 
-<button id="exportExcel">Export All Predictions to Excel</button>
-
-<h2>Admin View: All Players Predictions with Points</h2>
-<div id="adminView"></div>
-
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script>
 const PLAYERS=['Omar','Robbie','Khalil','Idriss','Aboudi','Masri','Hafez','Joseph','Rizk','Dani'];
 const SAMPLE_FIXTURES=[
-  {id:'1', gw:1, home:'Liverpool', away:'AFC Bournemouth', hg:2, ag:1},
-  {id:'2', gw:1, home:'Aston Villa', away:'Newcastle United', hg:1, ag:1},
-  {id:'3', gw:1, home:'Brighton & Hove Albion', away:'Fulham', hg:0, ag:2},
-  {id:'4', gw:1, home:'Sunderland', away:'West Ham United', hg:1, ag:3},
-  {id:'5', gw:1, home:'Tottenham Hotspur', away:'Burnley', hg:3, ag:0},
-  {id:'6', gw:1, home:'Wolverhampton Wanderers', away:'Manchester City', hg:0, ag:2},
-  {id:'7', gw:1, home:'Chelsea', away:'Crystal Palace', hg:2, ag:2},
-  {id:'8', gw:1, home:'Nottingham Forest', away:'Brentford', hg:1, ag:0},
-  {id:'9', gw:1, home:'Manchester United', away:'Arsenal', hg:2, ag:1},
-  {id:'10', gw:1, home:'Leeds United', away:'Everton', hg:1, ag:1}
-  // Continue full season here with actual results (hg/ag)
+  {id:'1', home:'Liverpool', away:'AFC Bournemouth'},
+  {id:'2', home:'Aston Villa', away:'Newcastle United'},
+  {id:'3', home:'Brighton & Hove Albion', away:'Fulham'},
+  {id:'4', home:'Sunderland', away:'West Ham United'},
+  {id:'5', home:'Tottenham Hotspur', away:'Burnley'},
+  {id:'6', home:'Wolverhampton Wanderers', away:'Manchester City'},
+  {id:'7', home:'Chelsea', away:'Crystal Palace'},
+  {id:'8', home:'Nottingham Forest', away:'Brentford'},
+  {id:'9', home:'Manchester United', away:'Arsenal'},
+  {id:'10', home:'Leeds United', away:'Everton'}
 ];
 
 let predictions={};
 
-// --- Helper functions ---
-function parseScore(s){if(!s)return null; const p=s.trim().split(/[-:xX]/); if(p.length!==2) return null; const a=parseInt(p[0],10),b=parseInt(p[1],10); if(isNaN(a)||isNaN(b)) return null; return {hg:a,ag:b};}
-function outcome(hg,ag){return hg>ag?'H':hg<ag?'A':'D';}
-function goalDiff(hg,ag){return hg-ag;}
-function scorePrediction(actual, pred){
-  if(!actual || !pred?.score) return 0;
-  const p=parseScore(pred.score); if(!p) return 0;
-  let pts=0;
-  const predOut = outcome(p.hg, p.ag);
-  const actualOut = outcome(actual.hg, actual.ag);
-  if(p.hg===actual.hg && p.ag===actual.ag) pts+=3; // exact score
-  else if(predOut===actualOut) pts+=1; // correct outcome
-  else if(goalDiff(p.hg,p.ag)===goalDiff(actual.hg,actual.ag)) pts+=1; // correct goal difference
-  return pts;
-}
-
-// --- Determine current player from URL ---
-const urlParams = new URLSearchParams(window.location.search);
-let currentPlayer = urlParams.get('player');
-if(!PLAYERS.includes(currentPlayer)) currentPlayer = PLAYERS[0];
-
-// --- Player dropdown ---
-function renderPlayerSelect(){
-  const sel=document.getElementById('playerSelect');
-  sel.innerHTML=PLAYERS.map(p=>`<option value="${p}">${p}</option>`).join('');
-  sel.value=currentPlayer;
-  sel.addEventListener('change',()=>{
-    saveCurrentPredictions();
-    currentPlayer = sel.value;
-    renderFixtures();
-  });
-}
-
-// --- Load predictions ---
-function loadPredictions(){
+// --- Helper ---
+function loadData(){
   const saved=localStorage.getItem('plp_predictions');
   predictions=saved?JSON.parse(saved):{};
 }
 
 // --- Save current player's predictions ---
-function saveCurrentPredictions(){
+function savePredictions(){
   SAMPLE_FIXTURES.forEach(f=>{
     const input=document.querySelector(`input[data-match="${f.id}"]`);
     if(input){
-      predictions[currentPlayer]=predictions[currentPlayer]||{};
-      predictions[currentPlayer][f.id]={score:input.value||''};
+      const player=currentPlayer;
+      predictions[player]=predictions[player]||{};
+      predictions[player][f.id]={score:input.value||''};
     }
   });
   localStorage.setItem('plp_predictions',JSON.stringify(predictions));
-  renderAdminView();
 }
 
-// --- Render fixtures for current player ---
+// --- Determine player from URL ---
+const urlParams=new URLSearchParams(window.location.search);
+let currentPlayer=urlParams.get('player');
+if(!PLAYERS.includes(currentPlayer)) currentPlayer=PLAYERS[0];
+
+// --- Render dropdown ---
+function renderPlayerSelect(){
+  const sel=document.getElementById('playerSelect');
+  sel.innerHTML=PLAYERS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  sel.value=currentPlayer;
+  sel.addEventListener('change',()=>{
+    savePredictions();
+    currentPlayer=sel.value;
+    renderFixtures();
+  });
+}
+
+// --- Render fixtures ---
 function renderFixtures(){
-  const wrap=document.getElementById('fixturesWrap'); wrap.innerHTML='';
+  const wrap=document.getElementById('fixturesWrap');
+  wrap.innerHTML='';
   SAMPLE_FIXTURES.forEach(f=>{
-    const val = predictions[currentPlayer]?.[f.id]?.score||'';
+    const val=predictions[currentPlayer]?.[f.id]?.score||'';
     const div=document.createElement('div'); div.className='fixture';
     div.innerHTML=`<b>${f.home} vs ${f.away}</b> – <input placeholder="e.g. 2-1" data-match="${f.id}" value="${val}"/>`;
     wrap.appendChild(div);
   });
 }
 
-// --- Render admin view with scoring ---
-function renderAdminView(){
-  const div=document.getElementById('adminView');
-  if(Object.keys(predictions).length===0){ div.innerHTML='No predictions yet.'; return; }
-  let html='<table><tr><th>Player</th><th>Match</th><th>Home</th><th>Away</th><th>Prediction</th><th>Points</th></tr>';
-  PLAYERS.forEach(p=>{
-    let total=0;
-    SAMPLE_FIXTURES.forEach(f=>{
-      const pred = predictions[p]?.[f.id]?.score||'';
-      const pts = scorePrediction(f, predictions[p]?.[f.id]);
-      total+=pts;
-      html+=`<tr><td>${p}</td><td>${f.id}</td><td>${f.home}</td><td>${f.away}</td><td>${pred}</td><td>${pts}</td></tr>`;
-    });
-    html+=`<tr><td colspan="5" style="text-align:right"><b>Total Points for ${p}</b></td><td><b>${total}</b></td></tr>`;
-  });
-  html+='</table>';
-  div.innerHTML=html;
-}
-
-// --- Export all predictions to Excel ---
-function exportToExcel(){
-  saveCurrentPredictions();
-  const ws_data=[['Player','Match','Home','Away','Prediction','Points']];
-  PLAYERS.forEach(p=>{
-    SAMPLE_FIXTURES.forEach(f=>{
-      const pred=predictions[p]?.[f.id]?.score||'';
-      const pts=scorePrediction(f, predictions[p]?.[f.id]);
-      ws_data.push([p,f.id,f.home,f.away,pred,pts]);
-    });
-  });
-  const wb=XLSX.utils.book_new();
-  const ws=XLSX.utils.aoa_to_sheet(ws_data);
-  XLSX.utils.book_append_sheet(wb,ws,'Predictions');
-  XLSX.writeFile(wb,'PLP_Predictions.xlsx');
-}
-
 // --- Init ---
 document.addEventListener('DOMContentLoaded',()=>{
-  loadPredictions();
+  loadData();
   renderPlayerSelect();
   renderFixtures();
-  renderAdminView();
-  document.getElementById('exportExcel').addEventListener('click',exportToExcel);
-
-  // Auto-save when typing
-  document.getElementById('fixturesWrap').addEventListener('input',()=>saveCurrentPredictions());
+  document.getElementById('fixturesWrap').addEventListener('input',()=>savePredictions());
 });
 </script>
-
 </body>
 </html>
