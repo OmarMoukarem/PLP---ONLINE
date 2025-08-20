@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Premier League Predictor – Player Page</title>
+<style>
+body { font-family:sans-serif; margin:20px; }
+header { text-align:center; margin-bottom:20px; }
+input { width:50px; margin-right:5px; }
+select { padding:5px; margin-bottom:10px; }
+button { margin-top:10px; padding:5px 10px; }
+.fixture { margin-bottom:10px; }
+</style>
+</head>
+<body>
+
+<header>
+<h1>Premier League Predictor – 2025/26</h1>
+<div>Select your name and enter your predictions</div>
+</header>
+
+<label>Select Player: 
+<select id="playerSelect"></select>
+</label>
+
+<div id="fixturesWrap"></div>
+
+<script>
+const PLAYERS=['Omar','Robbie','Khalil','Idriss','Aboudi','Masri','Hafez','Joseph','Rizk','Dani'];
+const SAMPLE_FIXTURES=[
+  {id:'1', home:'Liverpool', away:'AFC Bournemouth'},
+  {id:'2', home:'Aston Villa', away:'Newcastle United'},
+  {id:'3', home:'Brighton & Hove Albion', away:'Fulham'},
+  {id:'4', home:'Sunderland', away:'West Ham United'},
+  {id:'5', home:'Tottenham Hotspur', away:'Burnley'},
+  {id:'6', home:'Wolverhampton Wanderers', away:'Manchester City'},
+  {id:'7', home:'Chelsea', away:'Crystal Palace'},
+  {id:'8', home:'Nottingham Forest', away:'Brentford'},
+  {id:'9', home:'Manchester United', away:'Arsenal'},
+  {id:'10', home:'Leeds United', away:'Everton'}
+];
+
+let predictions={};
+
+function loadData(){
+  const saved=localStorage.getItem('plp_predictions');
+  predictions=saved?JSON.parse(saved):{};
+}
+
+function savePredictions(){
+  const player=currentPlayer;
+  SAMPLE_FIXTURES.forEach(f=>{
+    const input=document.querySelector(`input[data-match="${f.id}"]`);
+    predictions[player]=predictions[player]||{};
+    predictions[player][f.id]={score:input.value||''};
+  });
+  localStorage.setItem('plp_predictions',JSON.stringify(predictions));
+}
+
+let currentPlayer=PLAYERS[0];
+
+function renderPlayerSelect(){
+  const sel=document.getElementById('playerSelect');
+  sel.innerHTML=PLAYERS.map(p=>`<option value="${p}">${p}</option>`).join('');
+  sel.value=currentPlayer;
+  sel.addEventListener('change',()=>{
+    savePredictions();
+    currentPlayer=sel.value;
+    renderFixtures();
+  });
+}
+
+function renderFixtures(){
+  const wrap=document.getElementById('fixturesWrap');
+  wrap.innerHTML='';
+  SAMPLE_FIXTURES.forEach(f=>{
+    const val=predictions[currentPlayer]?.[f.id]?.score||'';
+    const div=document.createElement('div'); div.className='fixture';
+    div.innerHTML=`<b>${f.home} vs ${f.away}</b> – <input placeholder="e.g. 2-1" data-match="${f.id}" value="${val}"/>`;
+    wrap.appendChild(div);
+  });
+}
+
+document.addEventListener('DOMContentLoaded',()=>{
+  loadData();
+  renderPlayerSelect();
+  renderFixtures();
+  document.getElementById('fixturesWrap').addEventListener('input',()=>savePredictions());
+});
+</script>
+
+</body>
+</html>
